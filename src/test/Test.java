@@ -7,8 +7,9 @@ import com.ansj.vec.Word2VEC;
 public class Test {
     public static void main(String[] args) throws IOException {
         Word2VEC w1 = new Word2VEC() ;
-        w1.loadGoogleModel("library/corpus.bin") ;
-        
+        //w1.loadJavaModelTxt("library/Skipgram_data") ;
+        w1.loadJavaModelTxt("library/Cbow_data");
+        System.out.println("succeed load model!");
         System.out.println(w1.distance("奥尼尔"));
         
         System.out.println(w1.distance("毛泽东"));

@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +28,8 @@ public class Learn {
     /**
      * 训练多少个特征
      */
-    private int layerSize = 200;
+    //private int layerSize = 200;
+    private int layerSize = 50;
 
     /**
      * 上下文窗口大小
@@ -40,7 +42,7 @@ public class Learn {
 
     public int EXP_TABLE_SIZE = 1000;
 
-    private Boolean isCbow = false;
+    private Boolean isCbow = true;
 
     private double[] expTable = new double[EXP_TABLE_SIZE];
 
@@ -80,7 +82,7 @@ public class Learn {
             int lastWordCount = 0;
             int wordCountActual = 0;
             while ((temp = br.readLine()) != null) {
-                if (wordCount - lastWordCount > 10000) {
+                if (wordCount - lastWordCount > 300000) {
                     System.out
                         .println("alpha:" + alpha + "\tProgress: "
                                  + (int) (wordCountActual / (double) (trainWordsCount + 1) * 100)
@@ -254,6 +256,87 @@ public class Learn {
 
         }
     }
+    
+    /**
+     * 改进后的词袋模型
+     * @param index
+     * @param sentence
+     * @param b
+     */
+    private void cbowGramNew(int index, List<WordNeuron> sentence, int b) { //即CWindow方法
+        WordNeuron word = sentence.get(index);
+        int a, c = 0;
+
+        List<Neuron> neurons = word.neurons;
+        int window_layerSize = layerSize*(window*2); //在Cwindow模型下的项数
+        double[] neu1e = new double[window_layerSize];//误差项
+        double[] neu1 = new double[window_layerSize];//误差项
+        WordNeuron last_word;
+
+        for (a = b; a < window * 2 + 1 - b; a++)
+            if (a != window) {
+                c = index - window + a;
+                if (c < 0)
+                    continue;
+                if (c >= sentence.size())
+                    continue;
+                last_word = sentence.get(c);
+                if (last_word == null)
+                    continue;
+                int window_offset = layerSize*a; //所对应的下标的值
+                if (a > window) {
+                	window_offset -= layerSize;
+                }
+                for (c = 0; c < layerSize; c++)
+                    neu1[c+window_offset] += last_word.syn0[c];
+            }
+
+        //HIERARCHICAL SOFTMAX
+        for (int d = 0; d < neurons.size(); d++) {
+            HiddenNeuron out = (HiddenNeuron) neurons.get(d);
+            double f = 0;
+            // Propagate hidden -> output
+            for (c = 0; c < window_layerSize; c++)
+                f += neu1[c] * out.syn1_window[c];
+            if (f <= -MAX_EXP)
+                continue;
+            else if (f >= MAX_EXP)
+                continue;
+            else
+                f = expTable[(int) ((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
+            // 'g' is the gradient multiplied by the learning rate
+            //            double g = (1 - word.codeArr[d] - f) * alpha;
+            //              double g = f*(1-f)*( word.codeArr[i] - f) * alpha;
+            double g = f * (1 - f) * (word.codeArr[d] - f) * alpha;
+            //
+            for (c = 0; c < window_layerSize; c++) {
+                neu1e[c] += g * out.syn1_window[c];
+            }
+            // Learn weights hidden -> output
+            for (c = 0; c < window_layerSize; c++) {
+                out.syn1_window[c] += g * neu1[c];
+            }
+        }
+        for (a = b; a < window * 2 + 1 - b; a++) {
+            if (a != window) {
+                c = index - window + a;
+                if (c < 0)
+                    continue;
+                if (c >= sentence.size())
+                    continue;
+                last_word = sentence.get(c);
+                if (last_word == null)
+                    continue;
+                int window_offset = a*layerSize;
+                if (a > window) {
+                	window_offset -= layerSize;
+                }
+                for (c = 0; c < layerSize; c++)
+                    last_word.syn0[c] += neu1e[c+window_offset];
+            }
+
+        }
+    }
 
     /**
      * 统计词频
@@ -267,6 +350,7 @@ public class Learn {
             String temp = null;
             while ((temp = br.readLine()) != null) {
                 String[] split = temp.split(" ");
+                //System.out.println(split[0]);
                 trainWordsCount += split.length;
                 for (String string : split) {
                     mc.add(string);
@@ -297,14 +381,16 @@ public class Learn {
      */
     public void learnFile(File file) throws IOException {
         readVocab(file);
-        new Haffman(layerSize).make(wordMap.values());
-        
+        System.out.println("after read file!");
+        new Haffman(layerSize,this.window).make(wordMap.values());
+        System.out.println("after create Huffman tree!");
         //查找每个神经元
         for (Neuron neuron : wordMap.values()) {
             ((WordNeuron)neuron).makeNeurons() ;
         }
         
         trainModel(file);
+        //System.out.println("after train model!");
     }
 
     /**
@@ -331,6 +417,29 @@ public class Learn {
         }
     }
 
+    /**
+     * 保存模型
+     */
+    public void saveModelTxt(File file) {
+        // TODO Auto-generated method stub
+
+        try (PrintStream out = new PrintStream(file)) {
+        	out.println(wordMap.size());
+        	out.println(layerSize);
+            double[] syn0 = null;
+            for (Entry<String, Neuron> element : wordMap.entrySet()) {
+                out.println(element.getKey());
+                syn0 = ((WordNeuron) element.getValue()).syn0;
+                for (double d : syn0) {
+                    out.println(d);
+                }
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+    
     public int getLayerSize() {
         return layerSize;
     }
@@ -373,11 +482,12 @@ public class Learn {
     }
 
     public static void main(String[] args) throws IOException {
+    	System.out.println("the Heap memory: "+Runtime.getRuntime().maxMemory());
         Learn learn = new Learn();
         long start = System.currentTimeMillis() ;
-        learn.learnFile(new File("library/xh.txt"));
+        learn.learnFile(new File("library/zhwiki-20150301.txt"));
         System.out.println("use time "+(System.currentTimeMillis()-start));
-        learn.saveModel(new File("library/javaVector"));
+        learn.saveModelTxt(new File("library/CbowNew_data"));
         
     }
 }

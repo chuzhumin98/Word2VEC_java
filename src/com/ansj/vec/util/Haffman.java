@@ -14,9 +14,11 @@ import com.ansj.vec.domain.Neuron;
  */
 public class Haffman {
     private int layerSize;
+    private int window;
 
-    public Haffman(int layerSize) {
+    public Haffman(int layerSize, int window) {
         this.layerSize = layerSize;
+        this.window = window;
     }
 
     private TreeSet<Neuron> set = new TreeSet<>();
@@ -31,7 +33,7 @@ public class Haffman {
 
     private void merger() {
         // TODO Auto-generated method stub
-        HiddenNeuron hn = new HiddenNeuron(layerSize);
+        HiddenNeuron hn = new HiddenNeuron(layerSize, window);
         Neuron min1 = set.pollFirst();
         Neuron min2 = set.pollFirst();
         hn.freq = min1.freq + min2.freq;
