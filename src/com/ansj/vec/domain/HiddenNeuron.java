@@ -7,7 +7,7 @@ public class HiddenNeuron extends Neuron{
     
     public HiddenNeuron(int layerSize, int window){
         syn1 = new double[layerSize] ;
-        //syn1_window = new double[2*layerSize*window];
+        syn1_window = new double[2*layerSize*window];
     }
     
 }

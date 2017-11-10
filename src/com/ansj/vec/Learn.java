@@ -29,7 +29,7 @@ public class Learn {
      * 训练多少个特征
      */
     //private int layerSize = 200;
-    private int layerSize = 50;
+    private int layerSize = 100;
 
     /**
      * 上下文窗口大小
@@ -42,7 +42,7 @@ public class Learn {
 
     public int EXP_TABLE_SIZE = 1000;
 
-    private Boolean isCbow = true;
+    private Boolean isCbow = false;
 
     private double[] expTable = new double[EXP_TABLE_SIZE];
 
@@ -117,7 +117,7 @@ public class Learn {
                 for (int index = 0; index < sentence.size(); index++) {
                     nextRandom = nextRandom * 25214903917L + 11;
                     if (isCbow) {
-                        cbowGram(index, sentence, (int) nextRandom % window);
+                        cbowGramNew(index, sentence, (int) nextRandom % window);
                     } else {
                         skipGram(index, sentence, (int) nextRandom % window);
                     }
@@ -258,7 +258,7 @@ public class Learn {
     }
     
     /**
-     * 改进后的词袋模型
+     * 改进后的词袋模型（即CWindow）
      * @param index
      * @param sentence
      * @param b
@@ -272,7 +272,7 @@ public class Learn {
         double[] neu1e = new double[window_layerSize];//误差项
         double[] neu1 = new double[window_layerSize];//误差项
         WordNeuron last_word;
-
+        //System.out.println("b="+b);
         for (a = b; a < window * 2 + 1 - b; a++)
             if (a != window) {
                 c = index - window + a;
@@ -280,6 +280,9 @@ public class Learn {
                     continue;
                 if (c >= sentence.size())
                     continue;
+                if (a > window * 2 || a < 0) {
+                	continue;
+                }
                 last_word = sentence.get(c);
                 if (last_word == null)
                     continue;
@@ -287,6 +290,7 @@ public class Learn {
                 if (a > window) {
                 	window_offset -= layerSize;
                 }
+                //System.out.println(window_offset);
                 for (c = 0; c < layerSize; c++)
                     neu1[c+window_offset] += last_word.syn0[c];
             }
@@ -324,6 +328,9 @@ public class Learn {
                     continue;
                 if (c >= sentence.size())
                     continue;
+                if (a > window * 2 || a < 0) {
+                	continue;
+                }
                 last_word = sentence.get(c);
                 if (last_word == null)
                     continue;
@@ -338,6 +345,68 @@ public class Learn {
         }
     }
 
+    /**
+     * 改进后的skip gram 模型训练
+     * @param sentence
+     * @param neu1 
+     */
+    private void skipGramNew(int index, List<WordNeuron> sentence, int b) {
+        // TODO Auto-generated method stub
+        WordNeuron word = sentence.get(index);
+        int a, c = 0;
+        for (a = b; a < window * 2 + 1 - b; a++) {
+            if (a == window) {
+                continue;
+            }
+            c = index - window + a;
+            if (c < 0 || c >= sentence.size()) {
+                continue;
+            }
+            if (a < 0 || a > 2 * window) {
+            	continue;
+            }
+            int window_layerSize = layerSize*(window*2); //在改良后的skip gram模型下的项数
+            double[] neu1e = new double[window_layerSize];//误差项
+            int window_offset = a*layerSize;
+            if (a > window) {
+            	window_offset -= layerSize;
+            }
+            //HIERARCHICAL SOFTMAX
+            List<Neuron> neurons = word.neurons;
+            WordNeuron we = sentence.get(c);
+            for (int i = 0; i < neurons.size(); i++) {
+                HiddenNeuron out = (HiddenNeuron) neurons.get(i);
+                double f = 0;
+                // Propagate hidden -> output
+                for (int j = 0; j < layerSize; j++) {
+                    f += we.syn0[j] * out.syn1_window[j+window_offset];
+                }
+                if (f <= -MAX_EXP || f >= MAX_EXP) {
+                    continue;
+                } else {
+                    f = (f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2);
+                    f = expTable[(int) f];
+                }
+                // 'g' is the gradient multiplied by the learning rate
+                double g = (1 - word.codeArr[i] - f) * alpha;
+                // Propagate errors output -> hidden
+                for (c = 0; c < layerSize; c++) {
+                    neu1e[c] += g * out.syn1_window[c+window_offset];
+                }
+                // Learn weights hidden -> output
+                for (c = 0; c < layerSize; c++) {
+                    out.syn1_window[c+window_offset] += g * we.syn0[c];
+                }
+            }
+
+            // Learn weights input -> hidden
+            for (int j = 0; j < layerSize; j++) {
+                we.syn0[j] += neu1e[j+window_offset];
+            }
+        }
+
+    }
+    
     /**
      * 统计词频
      * @param file
@@ -485,9 +554,9 @@ public class Learn {
     	System.out.println("the Heap memory: "+Runtime.getRuntime().maxMemory());
         Learn learn = new Learn();
         long start = System.currentTimeMillis() ;
-        learn.learnFile(new File("library/zhwiki-20150301.txt"));
+        learn.learnFile(new File("library/pku_corpus.txt"));
         System.out.println("use time "+(System.currentTimeMillis()-start));
-        learn.saveModelTxt(new File("library/CbowNew_data"));
+        learn.saveModelTxt(new File("library/SkipgramSmall_data"));
         
     }
 }
