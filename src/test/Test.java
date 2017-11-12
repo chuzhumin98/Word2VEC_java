@@ -8,7 +8,7 @@ public class Test {
     public static void main(String[] args) throws IOException {
         Word2VEC w1 = new Word2VEC() ;
         //w1.loadJavaModelTxt("library/Skipgram_data") ;
-        w1.loadJavaModelTxt("library/SkipgramSmall_data");
+        w1.loadJavaModelTxt("D:/学习/大三上/信息检索/Word2VEC_java/library/SkipgramSmall_data");
         System.out.println("succeed load model!");
         System.out.println(w1.distance("中国"));
         
