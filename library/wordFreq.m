@@ -1,4 +1,4 @@
-[num] = textread('wordFreqBigonly');
+[num] = textread('wordFreqSmallonly');
 inteval = [1];
 k = 1;
 while (k < max(num))

@@ -42,7 +42,7 @@ public class Learn {
 
     public int EXP_TABLE_SIZE = 1000;
 
-    private Boolean isCbow = true;
+    private Boolean isCbow = false;
 
     private double[] expTable = new double[EXP_TABLE_SIZE];
 
@@ -119,7 +119,7 @@ public class Learn {
                     if (isCbow) {
                         cbowGram(index, sentence, (int) nextRandom % window);
                     } else {
-                        skipGram(index, sentence, (int) nextRandom % window);
+                        skipGramNew(index, sentence, (int) nextRandom % window);
                     }
                 }
 
@@ -556,7 +556,7 @@ public class Learn {
         long start = System.currentTimeMillis() ;
         learn.learnFile(new File("library/pku_corpus.txt"));
         System.out.println("use time "+(System.currentTimeMillis()-start));
-        learn.saveModelTxt(new File("library/CbowSmall_data"));
+        learn.saveModelTxt(new File("library/SkipgramV2NewSmall_data"));
         
     }
 }
