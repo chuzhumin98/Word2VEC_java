@@ -75,12 +75,12 @@ public class CompareResult {
 	
 	public static void main(String[] args) {
 		CompareResult cr = new CompareResult();
-		cr.compareResult(new File("library/SkipgramV2Small_data"), new File("library/SkipgramV2NewSmall_data"));
-		System.out.println(cr.maps.get("中锋"));
-		System.out.println(cr.maps.get("三角洲"));
-		System.out.println(cr.maps.get("股票"));
-		System.out.println(cr.maps.get("邓小平理论"));
+		cr.compareResult(new File("library/Cbow_data"), new File("library/CbowNew_data"));
+		System.out.println(cr.maps.get("穆里尼奥"));
+		System.out.println(cr.maps.get("封建王朝"));
+		System.out.println(cr.maps.get("张飞"));
+		System.out.println(cr.maps.get("巴塞罗那"));
+		System.out.println(cr.maps.get("数学"));
 		System.out.println(cr.maps.get("北京"));
-		System.out.println(cr.maps.get("美国"));
 	}
 }
